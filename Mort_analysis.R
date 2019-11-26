@@ -10,6 +10,7 @@ library(glmmTMB)
 library(DHARMa)
 library(MuMIn)
 library(emmeans)
+library(tidyverse)
 # Read and Manipulate
 Data = data.frame(read_xlsx(path = "New_Zealand_Mud_Snail_DATA.xlsx"))
 Data = subset(Data, select = -c(Raceway, date, Personnel, Comments))
@@ -24,19 +25,48 @@ Data = droplevels(Data[-which(Data$Bank %in% c('Control')),])
 Data$Day_Treatment = as.factor(as.character(Data$Day_Treatment))
 Data = droplevels(Data[-which(Data$Day_Treatment %in% c('1')),])
 Data$Day_Treatment = factor(Data$Day_Treatment, levels = c("3", "6", "9", "12"))
+Data$offsets = Data$Total_Counts -10
+Data$unique_rep = interaction(Data$Bag,Data$Species, Data$Sub_Bag)
 
+Plot_data = Data %>% group_by(Species,Day_Treatment) %>%summarise(Mean = mean(Active_count),
+                                                                  se = se(Active_count))
+  
+  
 
 #Visualize
-plots = ggplot(data=Data, aes(x=Day_Treatment, y=Active_count, col=Bag ,group=Species)) 
-plots + stat_summary(fun.data = "mean_se", aes(color=paste("mean", Species))) + theme_classic()
-
+png("weight_Partial_plot.png",width = 6.95, height = 4.89,units = 'in', res = 1080,bg = "white")
+ggplot(data=Plot_data, aes(x=Day_Treatment, y=Mean, group=Species, color =Species))+
+  geom_line()+
+  geom_point()+
+  geom_errorbar(aes(ymin=Mean-se, ymax=Mean+se), width=.1) +
+  scale_color_manual(name="Species (Tukey Grouping)",
+                           breaks=c("Mud", "Spring", "Pond"),
+                    labels=c("Mud (A)", "Spring (B)", "Pond (C)"),
+                    values=c("#C8C8C8", "#686868", "#000000") )+
+  scale_x_discrete(name ="Days of Treatment",
+                     labels=c("3" = "3 (A)", "6" = "6 (A)",
+                              "9" = "9 (A)", "12" = "12 (B)"))+
+  scale_y_continuous(name = "Mean Number of Live Individuals")+
+  theme_classic() + ggtitle("Survivorship of Three Snail Species Exposed to EarthTec QZ")
+dev.off()
+#summary of missing
+percentile = c(0.05,0.95)# Percentiles of interest 
+se =  function(x) sd(x)/(sqrt(length(x)))# calculates standard error 
+Descriptive_stats = summarise(group_by(Data,Species),# applys following statistics by group 
+                              Mean = mean(Total_Counts), 
+                              N = length(Total_Counts),# number of observations
+                              SD = sd(Total_Counts),# standard deviation 
+                              SE = se(Total_Counts),# standard error 
+                              Median = median(Total_Counts),
+                              Fifth_percentile= quantile(Total_Counts, probs = percentile[1], type = 2),# type 2 corrisponds to the same estimation method used in sas
+                              Ninety_Fifth_percentile= quantile(Total_Counts, probs = percentile[2], type = 2))# type 2 corrisponds to the same estimation method used in sas 
 #model
-model = glmmTMB(Active_count ~ Day_Treatment + Species + offset(Total_Counts)+(1|Bag/Sub_Bag),
+model = glmmTMB(Active_count ~ Day_Treatment + Species +(1|Bag/unique_rep),
                 data = Data, 
                 family = nbinom2(link = "log"),
                 na.action = na.omit, verbose = T,
-                control = glmmTMBControl(optCtrl = list(iter.max = 4000,
-                                                        eval.max = 4000)))    
+                control = glmmTMBControl(optCtrl = list(iter.max = 9000,
+                                                        eval.max = 9000)))    
 summary(model)
 sim_res = simulateResiduals(model)
 plot(sim_res , rank=T)
