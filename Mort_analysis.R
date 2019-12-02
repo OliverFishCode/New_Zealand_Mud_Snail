@@ -44,33 +44,33 @@ overdisp_fun <- function(model) {
 #Visualize
 Plot_data = Data %>% group_by(Species,Day_Treatment) %>%summarise(Mean = mean(Active_count),
                                                                   se = se(Active_count))
-png("weight_18_day_plot.png",width = 6.95, height = 4.89,units = 'in', res = 1080,bg = "white")
+png("NZMS_EarthtecQZ_Survivorship_Fig.png",width = 6.95, height = 4.89,units = 'in', res = 1080,bg = "white")
 ggplot(data=Plot_data, aes(x=Day_Treatment, y=Mean, group=Species, color =Species))+
   geom_line()+
   geom_point()+
   geom_errorbar(aes(ymin=Mean-se, ymax=Mean+se), width=.1) +
-  scale_color_manual(name="Species (Tukey Grouping)",
+  scale_color_manual(name="Species (Tukey grouping)",
                            breaks=c("Mud", "Spring", "Pond"),
                     labels=c("Mud (A)", "Spring (B)", "Pond (C)"),
                     values=c("#C8C8C8", "#686868", "#000000") )+
-  scale_x_discrete(name ="Days of Treatment (Tukey Grouping)",
+  scale_x_discrete(name ="Days of Treatment (Tukey grouping)",
                      labels=c("3" = "3 (A)", "6" = "6 (A)",
                               "9" = "9 (A)", "12" = "12 (B)", "15" = "15 (B)", "18" = "18 (C)"))+
   scale_y_continuous(name = "Mean Number of Live Individuals with Standard Error")+
   theme_classic() + ggtitle("Survivorship of Three Snail Species Exposed to EarthTec QZ")+
-  annotate("text", x = 3.25, y = 9, label = "* Different Tukey Groupings 
+  annotate("text", x = 3.25, y = 9, label = "* Different Tukey groupings 
   (letters) denote
-  statistical significance",fontface =2, hjust = 0)
+  statistical difference",fontface =2, hjust = 0)
 dev.off()
 #summary of missing
-Descriptive_stats = summarise(group_by(Data,Species),# applys following statistics by group 
-                              Mean = mean(Total_Counts), 
-                              N = length(Total_Counts),# number of observations
-                              SD = sd(Total_Counts),# standard deviation 
-                              SE = se(Total_Counts),# standard error 
-                              Median = median(Total_Counts),
-                              Fifth_percentile= quantile(Total_Counts, probs = percentile[1], type = 2),# type 2 corrisponds to the same estimation method used in sas
-                              Ninety_Fifth_percentile= quantile(Total_Counts, probs = percentile[2], type = 2))# type 2 corrisponds to the same estimation method used in sas 
+Descriptive_stats = summarise(group_by(Data,Species,Day_Treatment),# applys following statistics by group 
+                              Mean = mean(Active_count), 
+                              N = length(Active_count),# number of observations
+                              SD = sd(Active_count),# standard deviation 
+                              SE = se(Active_count),# standard error 
+                              Median = median(Active_count),
+                              Fifth_percentile= quantile(Active_count, probs = percentile[1], type = 2),# type 2 corrisponds to the same estimation method used in sas
+                              Ninety_Fifth_percentile= quantile(Active_count, probs = percentile[2], type = 2))# type 2 corrisponds to the same estimation method used in sas 
 #model
 
 
