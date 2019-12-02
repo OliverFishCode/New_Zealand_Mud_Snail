@@ -11,6 +11,7 @@ library(DHARMa)
 library(MuMIn)
 library(emmeans)
 library(tidyverse)
+library(AER)
 # Read and Manipulate
 Data = data.frame(read_xlsx(path = "New_Zealand_Mud_Snail_DATA.xlsx"))
 Data = subset(Data, select = -c(Raceway, date, Personnel, Comments))
@@ -24,17 +25,26 @@ Data$Species = as.factor(Data$Species)
 Data = droplevels(Data[-which(Data$Bank %in% c('Control')),])
 Data$Day_Treatment = as.factor(as.character(Data$Day_Treatment))
 Data = droplevels(Data[-which(Data$Day_Treatment %in% c('1')),])
-Data$Day_Treatment = factor(Data$Day_Treatment, levels = c("3", "6", "9", "12"))
+Data$Day_Treatment = factor(Data$Day_Treatment, levels = c("3", "6", "9", "12", "15", "18"))
 Data$offsets = Data$Total_Counts -10
 Data$unique_rep = interaction(Data$Bag,Data$Species, Data$Sub_Bag)
 
-Plot_data = Data %>% group_by(Species,Day_Treatment) %>%summarise(Mean = mean(Active_count),
-                                                                  se = se(Active_count))
-  
-  
+# user functios and specs
+percentile = c(0.05,0.95)# Percentiles of interest 
+se =  function(x) sd(x)/(sqrt(length(x)))# calculates standard error 
+overdisp_fun <- function(model) {
+  rdf <- df.residual(model)
+  rp <- residuals(model,type="pearson")
+  Pearson.chisq <- sum(rp^2)
+  prat <- Pearson.chisq/rdf
+  pval <- pchisq(Pearson.chisq, df=rdf, lower.tail=FALSE)
+  c(chisq=Pearson.chisq,ratio=prat,rdf=rdf,p=pval)
+}  
 
 #Visualize
-png("weight_Partial_plot.png",width = 6.95, height = 4.89,units = 'in', res = 1080,bg = "white")
+Plot_data = Data %>% group_by(Species,Day_Treatment) %>%summarise(Mean = mean(Active_count),
+                                                                  se = se(Active_count))
+png("weight_18_day_plot.png",width = 6.95, height = 4.89,units = 'in', res = 1080,bg = "white")
 ggplot(data=Plot_data, aes(x=Day_Treatment, y=Mean, group=Species, color =Species))+
   geom_line()+
   geom_point()+
@@ -43,15 +53,16 @@ ggplot(data=Plot_data, aes(x=Day_Treatment, y=Mean, group=Species, color =Specie
                            breaks=c("Mud", "Spring", "Pond"),
                     labels=c("Mud (A)", "Spring (B)", "Pond (C)"),
                     values=c("#C8C8C8", "#686868", "#000000") )+
-  scale_x_discrete(name ="Days of Treatment",
+  scale_x_discrete(name ="Days of Treatment (Tukey Grouping)",
                      labels=c("3" = "3 (A)", "6" = "6 (A)",
-                              "9" = "9 (A)", "12" = "12 (B)"))+
-  scale_y_continuous(name = "Mean Number of Live Individuals")+
-  theme_classic() + ggtitle("Survivorship of Three Snail Species Exposed to EarthTec QZ")
+                              "9" = "9 (A)", "12" = "12 (B)", "15" = "15 (B)", "18" = "18 (C)"))+
+  scale_y_continuous(name = "Mean Number of Live Individuals with Standard Error")+
+  theme_classic() + ggtitle("Survivorship of Three Snail Species Exposed to EarthTec QZ")+
+  annotate("text", x = 3.25, y = 9, label = "* Different Tukey Groupings 
+  (letters) denote
+  statistical significance",fontface =2, hjust = 0)
 dev.off()
 #summary of missing
-percentile = c(0.05,0.95)# Percentiles of interest 
-se =  function(x) sd(x)/(sqrt(length(x)))# calculates standard error 
 Descriptive_stats = summarise(group_by(Data,Species),# applys following statistics by group 
                               Mean = mean(Total_Counts), 
                               N = length(Total_Counts),# number of observations
@@ -61,17 +72,20 @@ Descriptive_stats = summarise(group_by(Data,Species),# applys following statisti
                               Fifth_percentile= quantile(Total_Counts, probs = percentile[1], type = 2),# type 2 corrisponds to the same estimation method used in sas
                               Ninety_Fifth_percentile= quantile(Total_Counts, probs = percentile[2], type = 2))# type 2 corrisponds to the same estimation method used in sas 
 #model
-model = glmmTMB(Active_count ~ Day_Treatment + Species +(1|Bag/unique_rep),
+
+
+model = glmmTMB(Active_count ~ Day_Treatment + Species + (1|Bag/unique_rep),
                 data = Data, 
-                family = nbinom2(link = "log"),
+                family = genpois(link = "log"),
                 na.action = na.omit, verbose = T,
-                control = glmmTMBControl(optCtrl = list(iter.max = 9000,
-                                                        eval.max = 9000)))    
+                control = glmmTMBControl(optCtrl = list(iter.max = 15000,
+                                                        eval.max = 15000)))
+
 summary(model)
 sim_res = simulateResiduals(model)
 plot(sim_res , rank=T)
+overdisp_fun(model) 
 
-emmeans_day = emmeans(model,~Day_Treatment)
 contrast(emmeans_day, method = "pairwise", adjust="tukey")
 CLD(emmeans_day)
 plot(emmeans_day, comparisons = T)
