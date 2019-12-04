@@ -25,7 +25,7 @@ Data$Species = as.factor(Data$Species)
 Data = droplevels(Data[-which(Data$Bank %in% c('Control')),])
 Data$Day_Treatment = as.factor(as.character(Data$Day_Treatment))
 Data = droplevels(Data[-which(Data$Day_Treatment %in% c('1')),])
-Data$Day_Treatment = factor(Data$Day_Treatment, levels = c("3", "6", "9", "12", "15", "18"))
+Data$Day_Treatment = factor(Data$Day_Treatment, levels = c("3", "6", "9", "12", "15", "18","21"))
 Data$offsets = Data$Total_Counts -10
 Data$unique_rep = interaction(Data$Bag,Data$Species, Data$Sub_Bag)
 
@@ -51,11 +51,13 @@ ggplot(data=Plot_data, aes(x=Day_Treatment, y=Mean, group=Species, color =Specie
   geom_errorbar(aes(ymin=Mean-se, ymax=Mean+se), width=.1) +
   scale_color_manual(name="Species (Tukey grouping)",
                            breaks=c("Mud", "Spring", "Pond"),
-                    labels=c("Mud (A)", "Spring (B)", "Pond (C)"),
+                    labels=c("Mud (B)", "Spring (B)", "Pond (C)"),
                     values=c("#C8C8C8", "#686868", "#000000") )+
   scale_x_discrete(name ="Days of Treatment (Tukey grouping)",
                      labels=c("3" = "3 (A)", "6" = "6 (A)",
-                              "9" = "9 (A)", "12" = "12 (B)", "15" = "15 (B)", "18" = "18 (C)"))+
+                              "9" = "9 (A)", "12" = "12 (B)",
+                              "15" = "15 (B)", "18" = "18 (C)",
+                              "21" = "21 (D)"))+
   scale_y_continuous(name = "Mean Number of Live Individuals with Standard Error")+
   theme_classic() + ggtitle("Survivorship of Three Snail Species Exposed to EarthTec QZ")+
   annotate("text", x = 3.25, y = 9, label = "* Different Tukey groupings 
@@ -86,6 +88,7 @@ sim_res = simulateResiduals(model)
 plot(sim_res , rank=T)
 overdisp_fun(model) 
 
+emmeans_day = emmeans(model,~Day_Treatment)
 contrast(emmeans_day, method = "pairwise", adjust="tukey")
 CLD(emmeans_day)
 plot(emmeans_day, comparisons = T)
