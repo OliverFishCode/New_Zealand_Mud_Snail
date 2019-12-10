@@ -25,7 +25,7 @@ Data$Species = as.factor(Data$Species)
 Data = droplevels(Data[-which(Data$Bank %in% c('Control')),])
 Data$Day_Treatment = as.factor(as.character(Data$Day_Treatment))
 Data = droplevels(Data[-which(Data$Day_Treatment %in% c('1')),])
-Data$Day_Treatment = factor(Data$Day_Treatment, levels = c("3", "6", "9", "12", "15", "18","21"))
+Data$Day_Treatment = factor(Data$Day_Treatment, levels = c("3", "6", "9", "12", "15", "18","21","24", "27"))
 Data$offsets = Data$Total_Counts -10
 Data$unique_rep = interaction(Data$Bag,Data$Species, Data$Sub_Bag)
 
@@ -43,26 +43,29 @@ overdisp_fun <- function(model) {
 
 #Visualize
 Plot_data = Data %>% group_by(Species,Day_Treatment) %>%summarise(Mean = mean(Active_count),
-                                                                  se = se(Active_count))
+                                                         se = se(Active_count))
+Plot_data$percent = (Plot_data$Mean/10)*100 
+Plot_data$percent_se = (Plot_data$se/10)*100     
 png("NZMS_EarthtecQZ_Survivorship_Fig.png",width = 6.95, height = 4.89,units = 'in', res = 1080,bg = "white")
-ggplot(data=Plot_data, aes(x=Day_Treatment, y=Mean, group=Species, color =Species))+
+ggplot(data=Plot_data, aes(x=Day_Treatment, y=percent, group=Species, color =Species))+
   geom_line()+
   geom_point()+
-  geom_errorbar(aes(ymin=Mean-se, ymax=Mean+se), width=.1) +
-  scale_color_manual(name="Species (Tukey grouping)",
+  geom_errorbar(aes(ymin=percent-percent_se, ymax=percent+percent_se), width=.1) +
+  scale_color_manual(name="Species",
                            breaks=c("Mud", "Spring", "Pond"),
-                    labels=c("Mud (B)", "Spring (B)", "Pond (C)"),
+                    labels=c("Mud Snail", "Page Springsnail", "Pond Snail"),
                     values=c("#C8C8C8", "#686868", "#000000") )+
-  scale_x_discrete(name ="Days of Treatment (Tukey grouping)",
-                     labels=c("3" = "3 (A)", "6" = "6 (A)",
-                              "9" = "9 (A)", "12" = "12 (B)",
-                              "15" = "15 (B)", "18" = "18 (C)",
-                              "21" = "21 (D)"))+
-  scale_y_continuous(name = "Mean Number of Live Individuals with Standard Error")+
-  theme_classic() + ggtitle("Survivorship of Three Snail Species Exposed to EarthTec QZ")+
-  annotate("text", x = 3.25, y = 9, label = "* Different Tukey groupings 
-  (letters) denote
-  statistical difference",fontface =2, hjust = 0)
+  scale_x_discrete(name ="Days of Treatment",
+                     labels=c("3" = "3", "6" = "6",
+                              "9" = "9", "12" = "12",
+                              "15" = "15", "18" = "18",
+                              "21" = "21", "24" = "24", "27" = "27"))+
+  scale_y_continuous(name = "Mean Percent of Active Individuals with SE", limits=c(0,102), breaks = c(0,10,20,
+                                                                                                               30,40,50,
+                                                                                                               60,70,80,
+                                                                                                               90,100))+
+  theme_classic()+theme(legend.position = c(0.8, 0.8))
+  
 dev.off()
 #summary of missing
 Descriptive_stats = summarise(group_by(Data,Species,Day_Treatment),# applys following statistics by group 
@@ -76,7 +79,7 @@ Descriptive_stats = summarise(group_by(Data,Species,Day_Treatment),# applys foll
 #model
 
 
-model = glmmTMB(Active_count ~ Day_Treatment + Species + (1|Bag/unique_rep),
+model = glmmTMB(Active_count ~ Day_Treatment*Species + (1|Bag/unique_rep),
                 data = Data, 
                 family = genpois(link = "log"),
                 na.action = na.omit, verbose = T,
@@ -88,12 +91,7 @@ sim_res = simulateResiduals(model)
 plot(sim_res , rank=T)
 overdisp_fun(model) 
 
-emmeans_day = emmeans(model,~Day_Treatment)
-contrast(emmeans_day, method = "pairwise", adjust="tukey")
-CLD(emmeans_day)
-plot(emmeans_day, comparisons = T)
+temp_emmeans = emmeans(model, ~Day_Treatment*Species)
+Contrasts_out = data.frame(contrast(temp_emmeans, "pairwise", simple = "each", combine = T, adjust = "tukey"))
 
-emmeans_species = emmeans(model,~Species)
-contrast(emmeans_species, method = "pairwise", adjust="tukey")
-CLD(emmeans_species)
-plot(emmeans_species, comparisons = T)
+write.csv(Contrasts_out,"H:\\WMRS\\! CENTRAL PROJ. FILES\\! Aquatics Research\\Federal Aid Fisheries Projects\\New Zealand Mud Snail\\Data\\Pairwise_Comp_Output..txt", row.names = FALSE)
