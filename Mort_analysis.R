@@ -25,7 +25,11 @@ Data$Species = as.factor(Data$Species)
 Data = droplevels(Data[-which(Data$Bank %in% c('Control')),])
 Data$Day_Treatment = as.factor(as.character(Data$Day_Treatment))
 Data = droplevels(Data[-which(Data$Day_Treatment %in% c('1')),])
-Data$Day_Treatment = factor(Data$Day_Treatment, levels = c("3", "6", "9", "12", "15", "18","21","24", "27"))
+Data$Day_Treatment = factor(Data$Day_Treatment, levels = c("3", "6", "9",
+                                                           "12", "15", "18",
+                                                           "21","24", "27",
+                                                           "30", "33", "36",
+                                                           "39"))
 Data$offsets = Data$Total_Counts -10
 Data$unique_rep = interaction(Data$Bag,Data$Species, Data$Sub_Bag)
 
@@ -53,13 +57,16 @@ ggplot(data=Plot_data, aes(x=Day_Treatment, y=percent, group=Species, color =Spe
   geom_errorbar(aes(ymin=percent-percent_se, ymax=percent+percent_se), width=.1) +
   scale_color_manual(name="Species",
                            breaks=c("Mud", "Spring", "Pond"),
-                    labels=c("Mud Snail", "Page Springsnail", "Pond Snail"),
+                    labels=c("mud snail", "page springsnail", "pond snail"),
                     values=c("#C8C8C8", "#686868", "#000000") )+
   scale_x_discrete(name ="Days of Treatment",
                      labels=c("3" = "3", "6" = "6",
                               "9" = "9", "12" = "12",
                               "15" = "15", "18" = "18",
-                              "21" = "21", "24" = "24", "27" = "27"))+
+                              "21" = "21", "24" = "24",
+                              "27" = "27", "30" = "30",
+                              "33" = "33","36" = "36",
+                              "39" = "39"))+
   scale_y_continuous(name = "Mean Percent of Active Individuals with SE", limits=c(0,102), breaks = c(0,10,20,
                                                                                                                30,40,50,
                                                                                                                60,70,80,
@@ -80,7 +87,8 @@ Descriptive_stats = summarise(group_by(Data,Species,Day_Treatment),# applys foll
 
 
 model = glmmTMB(Active_count ~ Day_Treatment*Species + (1|Bag/unique_rep),
-                data = Data, 
+                data = Data,
+                ziformula = ~ Species,
                 family = genpois(link = "log"),
                 na.action = na.omit, verbose = T,
                 control = glmmTMBControl(optCtrl = list(iter.max = 15000,
