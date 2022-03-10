@@ -51,16 +51,16 @@ Plot_data = Data %>% group_by(Species,Day_Treatment) %>%summarise(Mean = mean(Ac
                                                          se = se(Active_count))
 Plot_data$percent = (Plot_data$Mean/10)*100 
 Plot_data$percent_se = (Plot_data$se/10)*100     
-png("NZMS_EarthtecQZ_Survivorship_Fig.png",width = 6.95, height = 4.89,units = 'in', res = 1080,bg = "white")
+jpeg("NZMS_EarthtecQZ_Survivorship_Fig.jpeg",width = 6.95, height = 4.89,units = 'in', res = 1080,bg = "white")
 ggplot(data=Plot_data, aes(x=Day_Treatment, y=percent, group=Species, color =Species))+
   geom_line()+
   geom_point()+
   geom_errorbar(aes(ymin=percent-percent_se, ymax=percent+percent_se), width=.1) +
   scale_color_manual(name="Species",
                            breaks=c("Mud", "Spring", "Pond"),
-                    labels=c("mud snail", "Page springsnail", "pond snail"),
+                    labels=c("New Zealand Mud Snail", "Page Springsnail", "Pond Snail"),
                     values=c("#C8C8C8", "#686868", "#000000") )+
-  scale_x_discrete(name ="Days of treatment",
+  scale_x_discrete(name ="Days of Treatment",
                      labels=c("3" = "3", "6" = "6",
                               "9" = "9", "12" = "12",
                               "15" = "15", "18" = "18",
@@ -68,7 +68,7 @@ ggplot(data=Plot_data, aes(x=Day_Treatment, y=percent, group=Species, color =Spe
                               "27" = "27", "30" = "30",
                               "33" = "33","36" = "36",
                               "39" = "39"))+
-  scale_y_continuous(name = "Mean percent of active individuals with SE", limits=c(0,102), breaks = c(0,10,20,
+  scale_y_continuous(name = "Mean Percent of Active Individuals with SE", limits=c(0,102), breaks = c(0,10,20,
                                                                                                                30,40,50,
                                                                                                                60,70,80,
                                                                                                                90,100))+
